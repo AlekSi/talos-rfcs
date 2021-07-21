@@ -32,7 +32,7 @@ For this reason, we wish to clearly define a strategy for best practices.
       * External entropy source provided
         * Examples: Infinite Noise, analog sensors seeding /dev/random, etc
     * Inside PERSONAL HSM (Easy)
-      * Yubikeys enable simple one-command generation but lack backup options
+      * Yubikeys enable simple one-command generation but lack backup options // insecure curves
       * Ledger provides on-device generation and backup generation
   * MUST be stored on PERSONAL HSMs
   * SHOULD maintain Master key and Subkeys on separate PERSONAL HSMs
@@ -91,12 +91,15 @@ flexible setup that requires more upfront hardware and work.
       * Chrome
       * Chromium
       * Firefox
+      * Safari // citation needed
     * Linux
       * Qutebrowser
     * Android
       * Android Browser
       * Chrome
       * Chromium
+    * iOS
+      * Safari
   * PGP smartcard capable email client
     * Android
       * Fair Email
@@ -400,7 +403,7 @@ Note: If you lose your public key, you can -not- recover it from a Yubikey.
 * Bulk key operations like ssh, file decryption, etc. will require many taps
   * If you need this, pursue an advanced setup with an air-gapped laptop
 * Windows support is poor
-* iOS support does not exist
+* iOS support does not exist // not true
   * Android is well supported if mobile use cases are required
 
 ## Alternatives

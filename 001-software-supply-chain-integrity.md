@@ -47,9 +47,9 @@ control by design in order to protect those individuals and downstream users.
 
 ## Assumptions
 
-* Any human or computer involved in the supply chain is compromised
+* Any human or computer involved in the supply chain is compromised // what?
 * All systems managed by a single party (IT, third parties) are compromised
-* Any code or binaries controlled by one system or party are compromised
+* Any code or binaries controlled by one system or party are compromised // what?
 * All memory of all internet-connected computers is visible to the adversary
 * Any logging or backups that are not signed are tampered with
 * Adversary wields a "zero-click" "Zero-Day" exploit for any system
@@ -67,8 +67,8 @@ met in any order or cadence desired.
   * SHOULD be latest versions if security disclosures lag behind releases
     * Example: The Linux kernel
 * First-party code:
-  * MUST be signed in version control systems by well-known author keys
-  * MUST be signed by a separate subject matter expert after a security review
+  * MUST be signed in version control systems by well-known author keys // why?
+  * MUST be signed by a separate subject matter expert after a security review // why?
 * All code MUST build deterministically
 * All binaries:
   * MUST be built and signed by multiple parties with no management overlay
@@ -76,7 +76,7 @@ met in any order or cadence desired.
   * MUST be signed by well-known keys signed by a common CA
     * Example: PGP Smartcards signed under OpenPGP-CA.
 * All signing keys:
-  * MUST be stored in approved PERSONAL HSMs
+  * MUST be stored in approved PERSONAL HSMs // what is "personal" for CI?
   * MUST NOT ever come in contact with network-accessible memory
 * All execution environments SHOULD be able to verify m-of-n binary signatures
   * Example: Custom Secure Boot verifies minimum signatures against CA
@@ -110,20 +110,20 @@ consider.
 3. Builds binaries
 4. Verifies binary hashes match hashes in signed commit
 5. Runs test suite
-6. Signs binary with a well-known key in attached HSM
+6. Signs binary with a well-known key in attached HSM // PERSONAL?
 7. Publishes binary and signature to artifact storage
 8. Continuous Integration notifies project team of success/error of above steps
 
 ### Security Reviewer Workflow
 
-1. Reviews all code changes between release candidate tag and last commit
+1. Reviews all code changes between release candidate tag and last commit // what about other code?
 2. Reviews all third-party changes and evidence they are appropriate
 3. Appends tag signed with PERSONAL HSM to release candidate commit reviewed
 
 ### Release Engineer Workflow
 
 1. Release engineer verifies:
-    * Commit signature and security reviewer signature on commit are valid
+    * Commit signature and security reviewer signature on commit are valid // what is "security reviewer signature on commit"? there is already dev's signature?
     * The artifact corresponding to this commit is signed by the CI key
     * The artifact hash is in the release candidate commit
 2. Release engineer generates detached artifact signature with PERSONAL HSM
