@@ -1,4 +1,4 @@
-# Key Management
+# PGP and SSH Key Management
 
 ## Summary
 
@@ -17,7 +17,7 @@ For this reason, we wish to clearly define a strategy for best practices.
 * Any private key exposed to unreproducible binaries is compromised
 * Any private key exposed to internet-connected memory is compromised
 * Any private key that can be used without physical consent is compromised
-* Any key pair without physical backups will become irrecoverable at any time
+* Any key pair will become irrecoverable at any time
 * Any public key not signed by peers or a well maintained CA is is an imposter
 * Any shared hardware that is not used with constant supervision is compromised
 
@@ -121,21 +121,26 @@ flexible setup that requires more upfront hardware and work.
     Example:
 
     ```
-    $ gpg2 --card-edit
-    Application ID ...: D2760001240102000006037030240000
-    Version ..........: 2.0
+    $ gpg --card-edit
+
+    Reader ...........: Yubico YubiKey OTP FIDO CCID
+    Application ID ...: D2760001240100000006154577040000
+    Application type .: OpenPGP
+    Version ..........: 0.0
     Manufacturer .....: Yubico
-    Serial number ....: 03703024
-    Name of cardholder: Some Person
-    Language prefs ...: en
-    Sex ..............: male
+    Serial number ....: 15457704
+    Name of cardholder: [not set]
+    Language prefs ...: [not set]
+    Salutation .......:
     URL of public key : [not set]
-    Login data .......: sperson
-    Signature PIN ....: forced
-    Key attributes ...: 4096R 4096R 4096R
+    Login data .......: [not set]
+    Signature PIN ....: not forced
+    Key attributes ...: rsa2048 rsa2048 rsa2048
     Max. PIN lengths .: 127 127 127
-    PIN retry counter : 3 3 3
+    PIN retry counter : 3 0 3
     Signature counter : 0
+    KDF setting ......: off
+    UIF setting ......: Sign=off Decrypt=off Auth=off
     Signature key ....: [none]
     Encryption key....: [none]
     Authentication key: [none]
