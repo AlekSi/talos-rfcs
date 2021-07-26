@@ -3,12 +3,14 @@
 ## Summary
 
 This extends the ideas presented in RFC 001 with specific and opinionated
-recommendations for key generation, trust bootstrapping, and management.
+recommendations for key generation, git commit signing, and SSH access.
+Other related topics will be discussed in future RFCs.
 
 ## Motivation
 
 Left to their own devices, wide liberties can be taken with private key handling
-which can lead to substantial and non-obvious risks.
+which can lead to substantial and non-obvious risks:
+private keys could be stolen, git commit authors can be impersonated, etc.
 
 For this reason, we wish to clearly define a strategy for best practices.
 
@@ -18,28 +20,25 @@ For this reason, we wish to clearly define a strategy for best practices.
 * Any private key exposed to internet-connected memory is compromised
 * Any private key that can be used without physical consent is compromised
 * Any key pair will become irrecoverable at any time
-* Any public key not signed by peers or a well maintained CA is is an imposter
-* Any shared hardware that is not used with constant supervision is compromised
 
 ## Requirements
 
 * All private keys:
-  * MUST be generated in one of the following ways:
-    * Airgapped system (Advanced)
+  * MUST be generated in one of the following ways: // we should decide
+    1. Airgapped system (Advanced)
       * Secure booted with Heads or Safeboot
       * Deterministic OS image verified by at least one peer
       * Network devices physically disabled
       * External entropy source provided
         * Examples: Infinite Noise, analog sensors seeding /dev/random, etc
-    * Inside PERSONAL HSM (Easy)
-      * Yubikeys enable simple one-command generation but lack backup options // insecure curves
-      * Ledger provides on-device generation and backup generation
+    2. Inside Yubikeys (Easy)
+      * They enable simple one-command generation but lack backup options // insecure curves?
   * MUST be stored on PERSONAL HSMs
   * SHOULD maintain Master key and Subkeys on separate PERSONAL HSMs
   * SHOULD have strictly scoped and distinct master key and subkeys:
     * Master key only has "Certify" permission
     * Subkeys for each of "Auth", "Sign", and "Encrypt"
-  * SHOULD have a paper backup
+  * SHOULD have a paper backup // hehe
     * BIP39 or raw GnuPG ASC exports possible
     * Consider safety deposit box, high quality safe, or Shamir's Secret Sharing
 * All PERSONAL HSMs
@@ -112,6 +111,10 @@ flexible setup that requires more upfront hardware and work.
     * MacOS or Linux device
   * GnuPG 2.0+
     * MacOS or Linux device
+
+### Requirements
+
+
 
 ### Generation
 
