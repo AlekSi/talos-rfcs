@@ -1,4 +1,4 @@
-# PGP and SSH Key Management
+# PGP and Git Key Management
 
 ## Summary
 
@@ -16,285 +16,239 @@ For this reason, we wish to clearly define a strategy for best practices.
 
 ## Assumptions
 
-* Any private key exposed to unreproducible binaries is compromised
-* Any private key exposed to internet-connected memory is compromised
-* Any private key that can be used without physical consent is compromised
-* Any key pair will become irrecoverable at any time
+1. Any private key exposed to unreproducible binaries is compromised.
+2. Any private key exposed to internet-connected memory is compromised.
+3. Any private key that can be used without physical consent is compromised.
+4. Any key pair will become irrecoverable at any time.
 
 ## Requirements
 
-* All private keys:
-  * MUST be generated in one of the following ways: // we should decide
-    1. Airgapped system (Advanced)
-      * Secure booted with Heads or Safeboot
-      * Deterministic OS image verified by at least one peer
-      * Network devices physically disabled
-      * External entropy source provided
-        * Examples: Infinite Noise, analog sensors seeding /dev/random, etc
-    2. Inside Yubikeys (Easy)
-      * They enable simple one-command generation but lack backup options // insecure curves?
-  * MUST be stored on PERSONAL HSMs
-  * SHOULD maintain Master key and Subkeys on separate PERSONAL HSMs
-  * SHOULD have strictly scoped and distinct master key and subkeys:
-    * Master key only has "Certify" permission
-    * Subkeys for each of "Auth", "Sign", and "Encrypt"
-  * SHOULD have a paper backup // hehe
-    * BIP39 or raw GnuPG ASC exports possible
-    * Consider safety deposit box, high quality safe, or Shamir's Secret Sharing
-* All PERSONAL HSMs
-  * MUST require physical interaction for each operation
-  * MUST have a unique pin set for any access levels
-    * Examples: Admin and User pins on Yubikey
+1. All private keys must be generated and securely stored on YubiKeys.
+  * Our assumptions 1 and 2 make it almost impossible to generate a private key on a normal computer.
+    For example, even if a network-isolated virtual machine is used for that,
+    the host most likely was connected to the internet at one point;
+    therefore host OS and the hypervisor may already be compromised.
+  * Due to assumption 3, signing should require a physical button press, in addition to entering a password.
+  * Due to assumption 4, everyone should have an empty spare YubiKey to avoid long job disruptions.
+2. All public keys must be known to several parties (GitHub, PGP key servers, colleagues).
+  * For example, suppose one's GitHub account is compromised.
+    In that case, an attacker can replace the PGP key in account settings with their own
+    and make a signed commit. `ci-bot` should check that not only commit is verified by GitHub,
+    but also that signature can be verified with one of the keys set during bot's build process.
+    That would require an attacked to compromise both GitHub account and build system.
+3. All git commits must be signed.
+  * That prevents the trivial impersonation of the commit's author and committer.
 
 ## Scope
 
-### Current
-
-  * Key generation
-  * Key distribution
-  * Authentication
-    * SSH
-    * FIDO2
-    * WebAuthn
-    * U2F
-    * TOTP (Google Authenticator)
-  * Signing
-    * Git Commits and Tags
-    * Files
-  * Encryption
-    * Sensitive files
-    * Email
-
-### Future
-
-  * Password management
-  * Full disk decryption
-  * System login
-  * Measured Boot Attestation
+* Key generation and basic distribution
+* Git commit signing
+* GitHub flow
 
 ## Design
 
-The following is an opinionated set of defaults to consider that hit the MUST
-requirements while being maximally low friction.
+### Required hardware and software
 
-There are a number of alternative paths to hit the above MUST and SHOULD
-requirements an advanced reader may consider, but they are out of scope for
-this document. See the references section if you wish to pursue a highly
-flexible setup that requires more upfront hardware and work.
+* YubiKey 5 with firmware [5.2.3+](https://support.yubico.com/hc/en-us/articles/360016649139-YubiKey-5-2-3-Enhancements-to-OpenPGP-3-4-Support). Tested with firmware 5.2.7.
+* Linux or macOS.
+* GnuPG v2. Tested with version 2.3.1.
+* PIN entry program:
+  * macOS: `brew install pinentry-mac`.
+  * Linux: TODO.
+* Git.
+* No Yubico software is required.
 
-### Requirements
-  * 1+ Yubikey 5 series
-    * Selected due to wide compatibility and PGP touch support
-  * NFC/USB WebAuthn capable browser
-    * MacOS, Linux
-      * Chrome
-      * Chromium
-      * Firefox
-      * Safari // citation needed
-    * Linux
-      * Qutebrowser
-    * Android
-      * Android Browser
-      * Chrome
-      * Chromium
-    * iOS
-      * Safari
-  * PGP smartcard capable email client
-    * Android
-      * Fair Email
-      * K-9 Mail
-    * MacOS, Linux
-      * Thunderbird
-  * Yubico Authenticator
-    * Android, MacOS, or Linux device
-  * Yubikey Manager CLI
-    * MacOS or Linux device
-  * GnuPG 2.0+
-    * MacOS or Linux device
+### Key generation and distribution
 
-### Requirements
+1. Insert YubiKey into a workstation.
+2. Perform OpenPGP application reset:
+
+```sh
+$ gpg --card-edit
+
+Reader ...........: Yubico YubiKey OTP FIDO CCID
+Application ID ...: D2760001240100000006154577040000
+Application type .: OpenPGP
+Version ..........: 0.0
+Manufacturer .....: Yubico
+Serial number ....: 15457704
+Name of cardholder: [not set]
+Language prefs ...: [not set]
+Salutation .......:
+URL of public key : [not set]
+Login data .......: [not set]
+Signature PIN ....: not forced
+Key attributes ...: rsa2048 rsa2048 rsa2048
+Max. PIN lengths .: 127 127 127
+PIN retry counter : 3 0 3
+Signature counter : 0
+KDF setting ......: off
+UIF setting ......: Sign=off Decrypt=off Auth=off
+Signature key ....: [none]
+Encryption key....: [none]
+Authentication key: [none]
+General key info..: [none]
+
+$ gpg/card> admin
+Admin commands are allowed
+
+gpg/card> factory-reset
+gpg: OpenPGP card no. D2760001240100000006154577040000 detected
+
+gpg: Note: This command destroys all keys stored on the card!
+
+Continue? (y/N) y
+Really do a factory reset? (enter "yes") yes
+```
+
+3. Set PIN and Admin PIN:
+
+```sh
+gpg/card> passwd
+gpg: OpenPGP card no. D2760001240100000006154577040000 detected
+
+1 - change PIN
+2 - unblock PIN
+3 - change Admin PIN
+4 - set the Reset Code
+Q - quit
+
+Your selection?
+```
+
+If `passwd` command output is different, `admin` mode should be enabled as described in the previous point.
+
+PINs are actually passwords or passphrases – up to 127 7-bit ASCII symbols. Don't use only numbers.
+
+Set PIN via option 1 and Admin PIN via option 3. Default PIN: `123456`. Default Admin PIN: `12345678`.
+
+> Despite some guides claiming that PUK should be set too, [it has nothing to do with YubiKey's OpenPGP application](https://github.com/drduh/YubiKey-Guide/issues/271).
+> Reset code also should be set as [it is not useful for us](https://forum.yubico.com/viewtopicd01c.html?p=9055#p9055].
+
+4. Enable Curve 25519 key generation as it is [the most secure option](https://xkcd.com/285/):
+
+```
+gpg/card> key-attr
+Changing card key attribute for: Signature key
+Please select what kind of key you want:
+   (1) RSA
+   (2) ECC
+Your selection? 2
+Please select which elliptic curve you want:
+   (1) Curve 25519 *default*
+   (4) NIST P-384
+   (6) Brainpool P-256
+Your selection? 1
+The card will now be re-configured to generate a key of type: ed25519
+Note: There is no guarantee that the card supports the requested
+      key type or size.  If the key generation does not succeed,
+      please check the documentation of your card to see which
+      key types and sizes are supported.
+Changing card key attribute for: Encryption key
+Please select what kind of key you want:
+   (1) RSA
+   (2) ECC
+Your selection? 2
+Please select which elliptic curve you want:
+   (1) Curve 25519 *default*
+   (4) NIST P-384
+   (6) Brainpool P-256
+Your selection? 1
+The card will now be re-configured to generate a key of type: cv25519
+Changing card key attribute for: Authentication key
+Please select what kind of key you want:
+   (1) RSA
+   (2) ECC
+Your selection? 2
+Please select which elliptic curve you want:
+   (1) Curve 25519 *default*
+   (4) NIST P-384
+   (6) Brainpool P-256
+Your selection? 1
+The card will now be re-configured to generate a key of type: ed25519
+```
+
+5. Generate a key pair: do not make a backup; use your real name and `@talos-systems.com` email; set key to expire in 2 years:
+
+```
+gpg/card> generate
+Make off-card backup of encryption key? (Y/n) n
+
+Please note that the factory settings of the PINs are
+   PIN = '123456'     Admin PIN = '12345678'
+You should change them using the command --change-pin
+
+Please specify how long the key should be valid.
+         0 = key does not expire
+      <n>  = key expires in n days
+      <n>w = key expires in n weeks
+      <n>m = key expires in n months
+      <n>y = key expires in n years
+Key is valid for? (0) 2y
+Key expires at Wed Jul 26 17:53:41 2023 MSK
+Is this correct? (y/N) y
+
+GnuPG needs to construct a user ID to identify your key.
+
+Real name: Alexey Palazhchenko
+Email address: alexey.palazhchenko@talos-systems.com
+Comment:
+You selected this USER-ID:
+    "Alexey Palazhchenko <alexey.palazhchenko@talos-systems.com>"
+
+Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? o
+gpg: key 5F06850601C47617 marked as ultimately trusted
+gpg: directory '/Users/aleksi/.gnupg/openpgp-revocs.d' created
+gpg: revocation certificate stored as '/Users/aleksi/.gnupg/openpgp-revocs.d/D2356ADE54050F011923004F5F06850601C47617.rev'
+public and secret key created and signed.
+```
+
+Securely backup the revocation certificate.
+
+6. Export your public key. Somewhat surprisingly, YubiKey does not store it, and it is required for working on another computer.
+
+```sh
+$ gpg --armor --export <key ID>
+```
+
+7. Enforce mandatory physical user interaction for all key operations:
+
+```
+gpg/card> uif 1 permanent
+
+gpg/card> uif 2 permanent
+
+gpg/card> uif 3 permanent
+```
 
 
 
-### Generation
 
-1. Insert Yubikey into a workstation
-2. Generate keychain
 
-    Example:
 
-    ```
-    $ gpg --card-edit
 
-    Reader ...........: Yubico YubiKey OTP FIDO CCID
-    Application ID ...: D2760001240100000006154577040000
-    Application type .: OpenPGP
-    Version ..........: 0.0
-    Manufacturer .....: Yubico
-    Serial number ....: 15457704
-    Name of cardholder: [not set]
-    Language prefs ...: [not set]
-    Salutation .......:
-    URL of public key : [not set]
-    Login data .......: [not set]
-    Signature PIN ....: not forced
-    Key attributes ...: rsa2048 rsa2048 rsa2048
-    Max. PIN lengths .: 127 127 127
-    PIN retry counter : 3 0 3
-    Signature counter : 0
-    KDF setting ......: off
-    UIF setting ......: Sign=off Decrypt=off Auth=off
-    Signature key ....: [none]
-    Encryption key....: [none]
-    Authentication key: [none]
-    General key info..: [none]
 
-    gpg/card> admin
-    Admin commands are allowed
 
-    gpg/card> generate
-    Make an off-card backup of encryption key? (Y/n) n
-    Please specify how long the key should be valid.
-             0 = key does not expire
-          <n>  = key expires in n days
-          <n>w = key expires in n weeks
-          <n>m = key expires in n months
-          <n>y = key expires in n years
-    Key is valid for? (0) 2y
-    Key expires at Wed Dec 14 15:55:04 2018 PST
-    Is this correct? (y/N) y
 
-    GnuPG needs to construct a user ID to identify your key.
 
-    Real name: Some Person
-    Email address: person@company.com
-    Comment:
-    You selected this USER-ID:
-        "Some Person <person@company.com>"
 
-    Change (N)ame, (C)omment, (E)mail or (O)kay/(Q)uit? O
-    (Note that this step will take a little while ~1 minute)
-    gpg: key ABAEE282 marked as ultimately trusted
-    public and secret key created and signed.
 
-    gpg: checking the trustdb
-    gpg: 3 marginal(s) needed, 1 complete(s) needed, PGP trust model
-    gpg: depth: 0  valid:   4  signed:   0  trust: 0-, 0q, 0n, 0m, 0f, 4u
-    gpg: next trustdb check due at 2018-08-19
-    pub   4096R/ABAEE282 2016-02-11 [expires: 2018-12-14]
-          Key fingerprint = 5D97 0241 09AA 2A20 EC1F  AAEF 2223 BDB8 ABAE E282
-    uid       [ultimate] Some Person <person@company.com>
-    sub   4096R/C63542DE 2016-02-11 [expires: 2018-12-14]
-    sub   4096R/051D07BD 2016-02-11 [expires: 2018-12-14]
 
-    gpg/card> quit
-    ```
 
-3. Set personal details
 
-    This is optional but can really help to disambiguate multiple keys or
-    perhaps get a lost key in an office returned to you.
 
-    Example:
-    ```
-    $ gpg2 --card-edit
-    Application ID ...: D2760001240102000006037030240000
-    Version ..........: 2.0
-    Manufacturer .....: Yubico
-    Serial number ....: 03703024
-    Name of cardholder: [not set]
-    Language prefs ...: [not set]
-    Sex ..............: unspecified
-    URL of public key : [not set]
-    Login data .......: [not set]
-    Signature PIN ....: forced
-    Key attributes ...: 4096R 4096R 4096R
-    Max. PIN lengths .: 127 127 127
-    PIN retry counter : 3 3 3
-    Signature counter : 0
-    Signature key ....: [none]
-    Encryption key....: [none]
-    Authentication key: [none]
-    General key info..: [none]
+--------------------------------------------------------------------------
 
-    gpg/card> admin
-    Admin commands are allowed
 
-    gpg/card> name
-    Cardholder's surname: Person
-    Cardholder's given name: Some
 
-    gpg/card> sex
-    Sex ((M)ale, (F)emale or space): M
 
-    gpg/card> login
-    Login data (account name): sperson
 
-    gpg/card> lang
-    Language preferences: en
 
-    gpg/card> quit
-    ```
 
-4. Set random user/admin pins
 
-    ```
-    $ gpg2 --card-edit
-    Application ID ...: D2760001240102000006037030240000
-    Version ..........: 2.0
-    Manufacturer .....: Yubico
-    Serial number ....: 03703024
-    Name of cardholder: [not set]
-    Language prefs ...: [not set]
-    Sex ..............: unspecified
-    URL of public key : [not set]
-    Login data .......: [not set]
-    Signature PIN ....: forced
-    Key attributes ...: 4096R 4096R 4096R
-    Max. PIN lengths .: 127 127 127
-    PIN retry counter : 3 3 3
-    Signature counter : 0
-    Signature key ....: [none]
-    Encryption key....: [none]
-    Authentication key: [none]
-    General key info..: [none]
 
-    gpg/card> admin
-    Admin commands are allowed
 
-    gpg/card> passwd
-    gpg: OpenPGP card no. D2760001240102000006037030240000 detected
-
-    1 - change PIN
-    2 - unblock PIN
-    3 - change Admin PIN
-    4 - set the Reset Code
-    Q - quit
-
-    Your selection? 1
-    (You will have to type the old PIN (123456) and enter a new pin.
-    PIN changed.
-
-    1 - change PIN
-    2 - unblock PIN
-    3 - change Admin PIN
-    4 - set the Reset Code
-    Q - quit
-
-    Your selection? 3
-    (You will have to type the old Admin PIN (12345678) and enter a new admin pin.
-    PIN changed.
-
-    1 - change PIN
-    2 - unblock PIN
-    3 - change Admin PIN
-    4 - set the Reset Code
-    Q - quit
-
-    Your selection? q
-    ```
-
-5. Enforce mandatory physical user interaction for all key operations
+1. Enforce mandatory physical user interaction for all key operations
 
     ```
     ykman openpgp set-touch sig fixed
@@ -302,7 +256,7 @@ flexible setup that requires more upfront hardware and work.
     ykman openpgp set-touch enc fixed
     ```
 
-6. Distribute key to public key servers
+2. Distribute key to public key servers
 
 This is optional but recommended. Keys generally will propagate to other
 servers if you get it on one, but you can speed up the process by
