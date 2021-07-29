@@ -3,7 +3,7 @@
 ## Summary
 
 This extends the ideas presented in RFC 001 with specific and opinionated
-recommendations for key generation, git commit signing, and SSH access.
+recommendations for key generation, git commit signing and git merging workflow.
 Other related topics will be discussed in future RFCs.
 
 ## Motivation
