@@ -52,11 +52,12 @@ For this reason, we wish to clearly define a strategy for best practices.
 * YubiKey 5 with firmware [5.2.3+](https://support.yubico.com/hc/en-us/articles/360016649139-YubiKey-5-2-3-Enhancements-to-OpenPGP-3-4-Support). Tested with firmware 5.2.7.
 * Linux or macOS.
 * GnuPG v2. Tested with version 2.3.1.
+  * macOS: `brew install gnupg`.
 * PIN entry program:
   * macOS: `brew install pinentry-mac`.
   * Linux: TODO.
 * Git.
-* No Yubico software is required.
+* No Yubico software like YubiKey Manager, `ykman` is required.
 
 ### Key generation and distribution
 
@@ -208,7 +209,7 @@ Securely backup the revocation certificate.
 6. Export your public key. Somewhat surprisingly, YubiKey does not store it, and it is required for working on another computer.
 
 ```sh
-$ gpg --armor --export <key ID>
+$ gpg --armor --export D2356ADE54050F011923004F5F06850601C47617
 ```
 
 7. Enforce mandatory physical user interaction for all key operations:
@@ -221,11 +222,80 @@ gpg/card> uif 2 permanent
 gpg/card> uif 3 permanent
 ```
 
+8. Check settings:
 
+```
+gpg/card> list
 
+Reader ...........: Yubico YubiKey OTP FIDO CCID
+Application ID ...: D2760001240100000006154577040000
+Application type .: OpenPGP
+Version ..........: 0.0
+Manufacturer .....: Yubico
+Serial number ....: 15457704
+Name of cardholder: [not set]
+Language prefs ...: [not set]
+Salutation .......:
+URL of public key : [not set]
+Login data .......: [not set]
+Signature PIN ....: not forced
+Key attributes ...: ed25519 cv25519 ed25519
+Max. PIN lengths .: 127 127 127
+PIN retry counter : 3 0 3
+Signature counter : 4
+KDF setting ......: off
+UIF setting ......: Sign=on Decrypt=on Auth=on
+Signature key ....: D235 6ADE 5405 0F01 1923  004F 5F06 8506 01C4 7617
+      created ....: 2021-07-26 14:54:12
+Encryption key....: 5C71 862D C402 1926 4154  D18E AB20 4201 828F 396B
+      created ....: 2021-07-26 14:54:12
+Authentication key: 41C9 3468 2282 E380 F25A  4BFB 5E1A EADF D129 C2A0
+      created ....: 2021-07-26 14:54:12
+General key info..:
+pub  ed25519/5F06850601C47617 2021-07-26 Alexey Palazhchenko <alexey.palazhchenko@talos-systems.com>
+sec>  ed25519/5F06850601C47617  created: 2021-07-26  expires: 2023-07-26
+                                card-no: 0006 15457704
+ssb>  ed25519/5E1AEADFD129C2A0  created: 2021-07-26  expires: 2023-07-26
+                                card-no: 0006 15457704
+ssb>  cv25519/AB204201828F396B  created: 2021-07-26  expires: 2023-07-26
+                                card-no: 0006 15457704
 
+gpg/card> quit
+```
 
+Check `Key attributes`, `UIF setting`, keys.
 
+9. Configure GnuPG to use pinentry program:
+
+On macOS:
+```sh
+$ echo 'pinentry-program /usr/local/bin/pinentry-mac' > ~/.gnupg/gpg-agent.conf
+```
+
+10. Configure git:
+
+```sh
+$ git config --global user.email alexey.palazhchenko@talos-systems.com
+$ git config --global user.signingkey D2356ADE54050F011923004F5F06850601C47617
+$ git config --global commit.gpgsign true
+```
+
+11. Try to sign something locally:
+
+```sh
+$ gpg -K
+sec>  ed25519 2021-07-26 [SC] [expires: 2023-07-26]
+      D2356ADE54050F011923004F5F06850601C47617
+      Card serial no. = 0006 15457704
+uid           [ultimate] Alexey Palazhchenko <alexey.palazhchenko@talos-systems.com>
+ssb>  ed25519 2021-07-26 [A] [expires: 2023-07-26]
+ssb>  cv25519 2021-07-26 [E] [expires: 2023-07-26]
+
+$ git commit
+```
+
+After editing the commit message, the PIN entry program should ask for a PIN.
+After that, a physical press on the button on the YubiKey should be required.
 
 
 
