@@ -318,13 +318,6 @@ After that, a physical press on the button on the YubiKey should be required.
 
 
 
-1. Enforce mandatory physical user interaction for all key operations
-
-    ```
-    ykman openpgp set-touch sig fixed
-    ykman openpgp set-touch aut fixed
-    ykman openpgp set-touch enc fixed
-    ```
 
 2. Distribute key to public key servers
 
@@ -334,8 +327,6 @@ publishing to a few major ones:
 
     ```
     gpg --keyserver hkps://keys.openpgp.org --send-key YOUR_KEY_ID
-    gpg --keyserver hkps.pool.sks-keyservers.net  --send-key YOUR_KEY_ID
-    gpg --keyserver pgpkeys.urown.net --send-key YOUR_KEY_ID
     gpg --keyserver keyserver.ubuntu.com --send-key YOUR_KEY_ID
     ```
 
