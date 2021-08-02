@@ -59,7 +59,7 @@ For this reason, we wish to clearly define a strategy for best practices.
 * Git.
 * No Yubico software like YubiKey Manager, `ykman` is required.
 
-### Key generation and distribution
+### Key generation and basic distribution
 
 1. Insert YubiKey into a workstation.
 2. Perform OpenPGP application reset:
@@ -206,13 +206,7 @@ public and secret key created and signed.
 
 Securely backup the revocation certificate.
 
-6. Export your public key. Somewhat surprisingly, YubiKey does not store it, and it is required for working on another computer.
-
-```sh
-$ gpg --armor --export D2356ADE54050F011923004F5F06850601C47617
-```
-
-7. Enforce mandatory physical user interaction for all key operations:
+6. Enforce mandatory physical user interaction for all key operations:
 
 ```
 gpg/card> uif 1 permanent
@@ -222,7 +216,7 @@ gpg/card> uif 2 permanent
 gpg/card> uif 3 permanent
 ```
 
-8. Check settings:
+7. Check settings:
 
 ```
 gpg/card> list
@@ -265,6 +259,81 @@ gpg/card> quit
 
 Check `Key attributes`, `UIF setting`, keys.
 
+
+8. Export your public key. Somewhat surprisingly, YubiKey does not store it, and it is required for working on another computer.
+
+```sh
+$ gpg --armor --export D2356ADE54050F011923004F5F06850601C47617 > key.pgp
+```
+
+On other machine import it and mark as ultimately trusted:
+```sh
+$ gpg --armor --import key.pgp
+```
+
+```
+$ gpg --edit-key D2356ADE54050F011923004F5F06850601C47617
+gpg (GnuPG) 2.3.1; Copyright (C) 2021 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Secret key is available.
+
+sec  ed25519/5F06850601C47617
+     created: 2021-07-26  expires: 2023-07-26  usage: SC
+     card-no: 0006 15457704
+     trust: unknown       validity: unknown
+ssb  ed25519/5E1AEADFD129C2A0
+     created: 2021-07-26  expires: 2023-07-26  usage: A
+     card-no: 0006 15457704
+ssb  cv25519/AB204201828F396B
+     created: 2021-07-26  expires: 2023-07-26  usage: E
+     card-no: 0006 15457704
+[ unknown] (1). Alexey Palazhchenko <alexey.palazhchenko@talos-systems.com>
+
+gpg> trust
+sec  ed25519/5F06850601C47617
+     created: 2021-07-26  expires: 2023-07-26  usage: SC
+     card-no: 0006 15457704
+     trust: unknown       validity: unknown
+ssb  ed25519/5E1AEADFD129C2A0
+     created: 2021-07-26  expires: 2023-07-26  usage: A
+     card-no: 0006 15457704
+ssb  cv25519/AB204201828F396B
+     created: 2021-07-26  expires: 2023-07-26  usage: E
+     card-no: 0006 15457704
+[ unknown] (1). Alexey Palazhchenko <alexey.palazhchenko@talos-systems.com>
+
+Please decide how far you trust this user to correctly verify other users' keys
+(by looking at passports, checking fingerprints from different sources, etc.)
+
+  1 = I don't know or won't say
+  2 = I do NOT trust
+  3 = I trust marginally
+  4 = I trust fully
+  5 = I trust ultimately
+  m = back to the main menu
+
+Your decision? 5
+Do you really want to set this key to ultimate trust? (y/N) y
+
+sec  ed25519/5F06850601C47617
+     created: 2021-07-26  expires: 2023-07-26  usage: SC
+     card-no: 0006 15457704
+     trust: ultimate      validity: unknown
+ssb  ed25519/5E1AEADFD129C2A0
+     created: 2021-07-26  expires: 2023-07-26  usage: A
+     card-no: 0006 15457704
+ssb  cv25519/AB204201828F396B
+     created: 2021-07-26  expires: 2023-07-26  usage: E
+     card-no: 0006 15457704
+[ unknown] (1). Alexey Palazhchenko <alexey.palazhchenko@talos-systems.com>
+Please note that the shown key validity is not necessarily correct
+unless you restart the program.
+
+gpg> quit
+```
+
 9. Configure GnuPG to use pinentry program:
 
 On macOS:
@@ -272,12 +341,14 @@ On macOS:
 $ echo 'pinentry-program /usr/local/bin/pinentry-mac' > ~/.gnupg/gpg-agent.conf
 ```
 
+On Linux: TODO.
+
 10. Configure git:
 
 ```sh
 $ git config --global user.email alexey.palazhchenko@talos-systems.com
 $ git config --global user.signingkey D2356ADE54050F011923004F5F06850601C47617
-$ git config --global commit.gpgsign true
+$ git config --global commit.gpgSign true
 ```
 
 11. Try to sign something locally:
@@ -291,13 +362,23 @@ uid           [ultimate] Alexey Palazhchenko <alexey.palazhchenko@talos-systems.
 ssb>  ed25519 2021-07-26 [A] [expires: 2023-07-26]
 ssb>  cv25519 2021-07-26 [E] [expires: 2023-07-26]
 
-$ git commit
+$ git commit -s
 ```
 
 After editing the commit message, the PIN entry program should ask for a PIN.
 After that, a physical press on the button on the YubiKey should be required.
 
+12. Distribute keys
 
+13. Over SSH
+
+
+
+
+
+### Git commit signing
+
+### GitHub flow
 
 
 
@@ -319,7 +400,7 @@ After that, a physical press on the button on the YubiKey should be required.
 
 
 
-2. Distribute key to public key servers
+1. Distribute key to public key servers
 
 This is optional but recommended. Keys generally will propagate to other
 servers if you get it on one, but you can speed up the process by
