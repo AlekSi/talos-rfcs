@@ -36,7 +36,7 @@ For this reason, we wish to clearly define a strategy for best practices.
     and make a signed commit. `ci-bot` should check that not only commit is verified by GitHub,
     but also that signature can be verified with one of the keys set during bot's build process.
     That would require an attacked to compromise both GitHub account and build system.
-3. All git commits must be signed.
+3. All git commits must be signed by our keys.
   * That prevents the trivial impersonation of the commit's author and committer.
 
 ## Scope
