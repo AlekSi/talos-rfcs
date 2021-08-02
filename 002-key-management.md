@@ -370,6 +370,9 @@ After that, a physical press on the button on the YubiKey should be required.
 
 12. Distribute keys
 
+
+keybase pgp select --multi
+
 13. Over SSH
 
 
