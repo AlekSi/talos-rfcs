@@ -2,15 +2,12 @@
 
 ## Summary
 
-This extends the ideas presented in RFC 001 with specific and opinionated
-recommendations for key generation, git commit signing and git merging workflow.
+This extends the ideas presented in RFC 001 with specific and opinionated recommendations for key generation, git commit signing, and git merging workflow.
 Other related topics will be discussed in future RFCs.
 
 ## Motivation
 
-Left to their own devices, wide liberties can be taken with private key handling
-which can lead to substantial and non-obvious risks:
-private keys could be stolen, git commit authors can be impersonated, etc.
+Left to their own devices, wide liberties can be taken with private key handling which can lead to substantial and non-obvious risks: private keys could be stolen, git commit authors can be impersonated, etc.
 
 For this reason, we wish to clearly define a strategy for best practices.
 
@@ -25,31 +22,31 @@ For this reason, we wish to clearly define a strategy for best practices.
 
 1. All private keys must be generated and securely stored on YubiKeys.
   * Our assumptions 1 and 2 make it almost impossible to generate a private key on a normal computer.
-    For example, even if a network-isolated virtual machine is used for that,
-    the host most likely was connected to the internet at one point;
-    therefore host OS and the hypervisor may already be compromised.
-  * Due to assumption 3, signing should require a physical button press, in addition to entering a password.
+    For example, even if a network-isolated virtual machine is used for that, the host most likely was connected to the internet at one point; therefore host OS and the hypervisor may already be compromised.
+  * Even if a totally secure air-gapped computer was used for private key generation, the fact that the private key is known to the user means that we should maintain _and enforce_ the strict endpoint security.
+    Enforcing it typically implies some kind of "spy" software installed on computers used for work.
+    I don't think we want that. Using a YubiKey for key generation means that we have it without knowing it; the endpoint security can rely on trust.
+  * Due to assumption 3, signing should require a physical button tap, in addition to entering a password.
   * Due to assumption 4, everyone should have an empty spare YubiKey to avoid long job disruptions.
-2. All public keys must be known to several parties (GitHub, PGP key servers, colleagues).
+1. All public keys must be known to several parties (GitHub, PGP key servers, colleagues).
   * For example, suppose one's GitHub account is compromised.
-    In that case, an attacker can replace the PGP key in account settings with their own
-    and make a signed commit. `ci-bot` should check that not only commit is verified by GitHub,
-    but also that signature can be verified with one of the keys set during bot's build process.
+    In that case, an attacker can replace the PGP key in account settings with their own and make a signed commit. `ci-bot` should check that not only commit is verified by GitHub, but also that signature can be verified with one of the keys set during bot's build process.
     That would require an attacked to compromise both GitHub account and build system.
 3. All git commits must be signed by our keys.
   * That prevents the trivial impersonation of the commit's author and committer.
 
 ## Scope
 
-* Key generation and basic distribution
-* Git commit signing
-* GitHub flow
+* Key generation and basic distribution.
+* Git commit signing.
+* GitHub flow.
 
 ## Design
 
 ### Required hardware and software
 
-* YubiKey 5 with firmware [5.2.3+](https://support.yubico.com/hc/en-us/articles/360016649139-YubiKey-5-2-3-Enhancements-to-OpenPGP-3-4-Support). Tested with firmware 5.2.7.
+* YubiKey 5 with firmware [5.2.3+](https://support.yubico.com/hc/en-us/articles/360016649139-YubiKey-5-2-3-Enhancements-to-OpenPGP-3-4-Support).
+  Tested with firmware 5.2.7.
 * Linux or macOS.
 * GnuPG v2. Tested with version 2.3.1.
   * macOS: `brew install gnupg`.
@@ -57,14 +54,14 @@ For this reason, we wish to clearly define a strategy for best practices.
   * macOS: `brew install pinentry-mac`.
   * Linux: TODO.
 * Git.
-* No Yubico software like YubiKey Manager, `ykman` is required.
+* No Yubico software like YubiKey Manager, `ykman`, etc is required.
 
 ### Key generation and basic distribution
 
-1. Insert YubiKey into a workstation.
+1. Insert YubiKey into a computer.
 2. Perform OpenPGP application reset:
 
-```sh
+```
 $ gpg --card-edit
 
 Reader ...........: Yubico YubiKey OTP FIDO CCID
@@ -104,7 +101,7 @@ Really do a factory reset? (enter "yes") yes
 
 3. Set PIN and Admin PIN:
 
-```sh
+```
 gpg/card> passwd
 gpg: OpenPGP card no. D2760001240100000006154577040000 detected
 
@@ -119,9 +116,12 @@ Your selection?
 
 If `passwd` command output is different, `admin` mode should be enabled as described in the previous point.
 
-PINs are actually passwords or passphrases – up to 127 7-bit ASCII symbols. Don't use only numbers.
+PINs are actually passwords or passphrases – up to 127 7-bit ASCII symbols.
+Don't use only numbers.
 
-Set PIN via option 1 and Admin PIN via option 3. Default PIN: `123456`. Default Admin PIN: `12345678`.
+Set PIN via option 1 and Admin PIN via option 3.
+Default PIN: `123456`.
+Default Admin PIN: `12345678`.
 
 > Despite some guides claiming that PUK should be set too, [it has nothing to do with YubiKey's OpenPGP application](https://github.com/drduh/YubiKey-Guide/issues/271).
 > Reset code also should be set as [it is not useful for us](https://forum.yubico.com/viewtopicd01c.html?p=9055#p9055].
@@ -169,7 +169,8 @@ Your selection? 1
 The card will now be re-configured to generate a key of type: ed25519
 ```
 
-5. Generate a key pair: do not make a backup; use your real name and `@talos-systems.com` email; set key to expire in 2 years:
+5. Generate a key pair: do not make a backup; use your real name and `@talos-systems.com` email;
+   set key to expire in 2 years:
 
 ```
 gpg/card> generate
@@ -260,13 +261,15 @@ gpg/card> quit
 Check `Key attributes`, `UIF setting`, keys.
 
 
-8. Export your public key. Somewhat surprisingly, YubiKey does not store it, and it is required for working on another computer.
+8. Export your public key.
+   Somewhat surprisingly, YubiKey does not store it, and it is required for working on another computer.
 
 ```sh
 $ gpg --armor --export D2356ADE54050F011923004F5F06850601C47617 > key.pgp
 ```
 
 On other machine import it and mark as ultimately trusted:
+
 ```sh
 $ gpg --armor --import key.pgp
 ```
@@ -337,7 +340,7 @@ gpg> quit
 9. Configure GnuPG to use pinentry program:
 
 On macOS:
-```sh
+```
 $ echo 'pinentry-program /usr/local/bin/pinentry-mac' > ~/.gnupg/gpg-agent.conf
 ```
 
@@ -345,15 +348,16 @@ On Linux: TODO.
 
 10. Configure git:
 
-```sh
+```
 $ git config --global user.email alexey.palazhchenko@talos-systems.com
 $ git config --global user.signingkey D2356ADE54050F011923004F5F06850601C47617
 $ git config --global commit.gpgSign true
+$ git config --global tag.gpgSign true
 ```
 
 11. Try to sign something locally:
 
-```sh
+```
 $ gpg -K
 sec>  ed25519 2021-07-26 [SC] [expires: 2023-07-26]
       D2356ADE54050F011923004F5F06850601C47617
@@ -366,182 +370,61 @@ $ git commit -s
 ```
 
 After editing the commit message, the PIN entry program should ask for a PIN.
-After that, a physical press on the button on the YubiKey should be required.
+After that, a physical tap on the button on the YubiKey should be required.
 
 12. Distribute keys
 
+```sh
+gpg --keyserver hkps://keys.openpgp.org --send-key D2356ADE54050F011923004F5F06850601C47617
+gpg --keyserver keyserver.ubuntu.com --send-key D2356ADE54050F011923004F5F06850601C47617
+```
 
-keybase pgp select --multi
+keys.openpgp.org has an additional step for verifying an email address; do it [there](https://keys.openpgp.org/manage).
 
-13. Over SSH
+Additionally, if you already use [Keybase](https://keybase.io), you may upload your key there.
+See [this issue](https://github.com/keybase/keybase-issues/issues/4025) for details.
 
+13. Configure YubiKey to work over SSH
 
+If you plan to use git on a remote server, you need to configure SSH.
+See [this page](https://wiki.gnupg.org/AgentForwarding) for details.
+If everything is configured correctly, you should see similar lines in `ssh -v <HOST>` output:
 
+```
+debug1: Remote connections from /run/user/0/gnupg/S.gpg-agent:-2 forwarded to local address /Users/aleksi/.gnupg/S.gpg-agent.extra:-2
+...
+debug1: remote forward success for: listen /run/user/0/gnupg/S.gpg-agent:-2, connect /Users/aleksi/.gnupg/S.gpg-agent.extra:-2
+```
 
+14.  Add your public key to GitHub account [there](https://github.com/settings/keys).
 
 ### Git commit signing
 
+After configuration, all commits should be signed by default; there is no need to pass `-S` flag (but `-s` flag
+should still be used for adding "Signed-off" lines).
+You will be asked a PIN once; it is cached by `gpg-agent`.
+The button on the YubiKey should be tapped on each commit.
+
 ### GitHub flow
 
+If we want all commits to be signed by our keys, we have only one option - ensure that all PRs are merged
+in fast-forward mode and contain exactly one signed commit.
+Unfortunately, GitHub does not support it natively.
 
+We should modify ci-bot and CI configuration to:
 
+1. Check that PR's commit is verified and signed by the key that is both set in author's settings (using an URL
+   like https://github.com/AlekSi.gpg) and is present in bot's build configuration (see requirement #2).
+2. Check that PR can be merged with `git --ff-only`.
+3. Modify `/lgtm` command to perform `git --ff-only` or equivalent
+   (see [this StackOverflow question](https://stackoverflow.com/questions/55800253/how-can-i-do-a-fast-forward-merge-using-the-github-api)).
 
+We should also update repositories settings and protected branches configuration to forbid direct pushes
+to the base branches, among other things.
+Probably, those settings should be automated by Kres or something else.
 
+> There are two other options: allow GitHub to [sign merged and squashed PR with their own key](https://docs.github.com/en/github/authenticating-to-github/managing-commit-signature-verification/about-commit-signature-verification) (see [this commit](https://github.com/AlekSi/talos/commit/fe0d975391ea4d7545fc16a30fe726b5127f9261)) or push directly to the base branch (see [this commit](https://github.com/talos-systems/bldr/commit/3198175d11e21abbc1982ef4efeed45acd817f20)).
+> The former option doesn't work for us as we want to use our own keys.
+> The latter makes it too easier to screw up.
 
-
-
-
---------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-1. Distribute key to public key servers
-
-This is optional but recommended. Keys generally will propagate to other
-servers if you get it on one, but you can speed up the process by
-publishing to a few major ones:
-
-    ```
-    gpg --keyserver hkps://keys.openpgp.org --send-key YOUR_KEY_ID
-    gpg --keyserver keyserver.ubuntu.com --send-key YOUR_KEY_ID
-    ```
-
-Note: If you lose your public key, you can -not- recover it from a Yubikey.
-
-### Configuration
-
-1. Configure shell to use yubikey for ssh
-
-    Add the following to your shell configuration file:
-
-    ```
-    unset SSH_AGENT_PID
-    if [ "${gnupg_SSH_AUTH_SOCK_by:-0}" -ne $$ ]; then
-      export SSH_AUTH_SOCK="$(gpgconf --list-dirs agent-ssh-socket)"
-    fi
-    ```
-
-    Be sure to source this file or open a new shell, so this applies!
-
-2. Configure VCS to use new ssh/gpg keys
-
-    Get ssh public key:
-    ```
-    gpg --export-ssh-key YOUR_KEY_ID
-    ```
-
-    Get PGP public key:
-    ```
-    gpg --export -a YOUR_KEY_ID
-    ```
-
-    Configure these in your Github/Gitea/Gitlab settings as your sole keys in
-    the respective ssh and pgp sections.
-
-3. Configure Yubikey as only 2FA
-
-   Navigate to your security settings in your VCS web interface:
-
-   * Enroll/Re-enroll TOTP using Yubico Authenticator per UI instructions
-     * Enable "touch" in options in Yubico Authenticator
-   * Setup Yubikey for U2F/FIDO2/WebAuthn 2FA as well
-   * Ensure all other 2FA methods such as SMS are disabled
-
-4. Verify ssh is only offering your Yubikey key
-
-    ```
-    ssh-add -L
-    ```
-
-5. Verify you can ssh to your git provider
-
-    ```
-    ssh git@github.com
-    ```
-
-    Note: Don't forget to tap your key when it flashes!
-
-6. Configure git to always sign by default
-
-   Adjust ~/.gitconfig similar to contain the following:
-    ```
-    [user]
-        signingKey = YOUR_KEY_ID_HERE
-    [commit]
-        gpgSign = true
-    [merge]
-        gpgSign = true
-    [gpg]
-        program = gpg2
-    ```
-
-7. Publish key to maintainers repo
-
-    The goal is to get a signed commit that shows as "Verified"
-
-    ```
-    git clone git@github.com:talos-systems/keys.git
-    cd keys
-    gpg --export YOUR_KEY_ID > pgp/jdoe.pgp
-    gpg --export-ssh-key YOUR_KEY_ID > ssh/jdoe.pub
-    git checkout -b add-keys-jdoe
-    git commit -m "Add keys"
-    ```
-
-8. Have the existing maintainer merge your key
-
-    ```
-    git merge --no-ff add-keys-jdoe master
-    ```
-
-    Note: Maintainers, ensure you confirm the key is legitimate out of band!
-
-
-## Drawbacks
-
-* Bulk key operations like ssh, file decryption, etc. will require many taps
-  * If you need this, pursue an advanced setup with an air-gapped laptop
-* Windows support is poor
-* iOS support does not exist // not true
-  * Android is well supported if mobile use cases are required
-
-## Alternatives
-
-List any alternatives others have tried, including the current solution if
-there is one, to help others quickly catch up on how we got here.
-
-## Questions
-
-* How do we want to approach multi-sig?
-  * distrust-foundation/Sig and hashbang/git-signatures approaches are options
-  * Should likely address after the team has comfort with the scope of this doc
-* How do we want to approach release engineering?
-  * Should likely solve deterministic builds first
-  * Will need to decide on a single widely known release key
-    * Who holds it?
-    * Who should hold the revocation certificate as insurance against abuse?
-
-## Glossary
-
-### PERSONAL HSM
-
-Small form factor HSM capable of doing common required cryptographic operations
-such as GnuPG smartcard emulation, TOTP, challenge/response, etc.
-
-### MAINTAINER
-
-Someone with write access to the primary source of truth branch for one or more
-projects.
-
-## References
-
-* [#! Key generation guide](https://github.com/hashbang/book/blob/master/content/docs/security/SSH.md)
-* [gpg.wtf guide](https://gpg.wtf)
+After that is done, we should enable "Vigilant mode" on GitHub and merge all PRs with `/lgtm` command.
