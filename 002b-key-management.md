@@ -47,20 +47,20 @@ For this reason, we wish to clearly define a strategy for best practices.
 
 * YubiKey 5 with firmware [5.2.3+](https://support.yubico.com/hc/en-us/articles/360016649139-YubiKey-5-2-3-Enhancements-to-OpenPGP-3-4-Support).
   Tested with firmware 5.2.7.
-* Linux or macOS.
+* Linux or macOS. Linux instructions below assume Ubuntu.
 * GnuPG v2. Tested with version 2.3.1.
   * macOS: `brew install gnupg`.
 * PIN entry program:
   * macOS: `brew install pinentry-mac`.
-  * Linux: TODO?
+  * Linux: There should already be one or several pinentry programs installed under `/usr/bin`. See [here](https://superuser.com/questions/520980/how-to-force-gpg-to-use-console-mode-pinentry-to-prompt-for-passwords) if you need to manually set which pinentry program will be used.
 * Git.
 * If an older GnuPG is used, the [`ykman` command line tool](https://developers.yubico.com/yubikey-manager/) might be needed.
   * It may be installed separately:
     * macOS: `brew install ykman`.
-    * Linux: TODO?
+    * Linux: Enable the yubikey PPA following directions [here](https://support.yubico.com/hc/en-us/articles/360016649039-Enabling-the-Yubico-PPA-on-Ubuntu), then `apt install yubikey-manager`
   * or as a part of [YubiKey Manager GUI program](https://www.yubico.com/support/download/yubikey-manager/):
     * macOS `brew install yubico-yubikey-manager`.
-    * Linux: TODO?
+    * Linux: Enable the PPA with directions above, then `apt install yubikey-personalization-gui`
 
 ### Key generation and basic distribution
 
@@ -130,7 +130,7 @@ Default PIN: `123456`.
 Default Admin PIN: `12345678`.
 
 > Despite some guides claiming that PUK should be set too, [it has nothing to do with YubiKey's OpenPGP application](https://github.com/drduh/YubiKey-Guide/issues/271).
-> Reset code also should be set as [it is not useful for us](https://forum.yubico.com/viewtopicd01c.html?p=9055#p9055].
+> Reset code also should be set as [it is not useful for us](https://forum.yubico.com/viewtopicd01c.html?p=9055#p9055).
 
 4. Enable Curve 25519 key generation as it is [the most secure option](https://xkcd.com/285/):
 
@@ -380,7 +380,15 @@ On macOS:
 $ echo 'pinentry-program /usr/local/bin/pinentry-mac' > ~/.gnupg/gpg-agent.conf
 ```
 
-On Linux: TODO?
+On Linux:
+
+There should already be one or several pinentry programs installed under `/usr/bin`. See [here](https://superuser.com/questions/520980/how-to-force-gpg-to-use-console-mode-pinentry-to-prompt-for-passwords) if you need to manually set which pinentry program will be used.
+
+TL;DR is that it's the same as Mac with a different program and path.
+
+```
+$ echo 'pinentry-program /usr/bin/<pinentry-program>' >  ~/.gnupg/gpg-agent.conf
+```
 
 10. Configure git:
 
